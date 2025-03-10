@@ -9,14 +9,14 @@ int main() {
 	char command;
 	int i;
 	int j;
+	int alphabet[60] = { 0, };
 
 	printf("Enter the sentense: ");
 	gets(str);
 	printf("%s\n", str);
-	printf("%d\n", str[0]);
 	printf("command: ");
 	command = getchar();
-	while (command != '0') 
+	while (command != '0')
 	{
 		if (command >= 'a' && command <= 'z') {
 			for (i = 0; i < 80; i++) {
@@ -30,6 +30,7 @@ int main() {
 					break;
 				}
 			}
+			printf("%s\n", str);
 		}
 		else if (command >= 'A' && command <= 'Z') {
 			for (i = 0; i < 80; i++) {
@@ -43,31 +44,42 @@ int main() {
 					break;
 				}
 			}
+			printf("%s\n", str);
 		}
 		else if (command == '1') {
-
+			
+			printf("%s\n", str);
 		}
 		else if (command == '2') {
-
+			printf("%s\n", str);
 		}
 		else if (command == '3') {
-			if (backup3 == 0) {
-
-			}
-			else if(backup3 == 1) {
-
-			}
+			printf("%s\n", str);
 		}
 		else if (command == '4') {
-
+			printf("%s\n", str);
 		}
 		else if (command == '5') {
-
+			for (i = 0; str[i] == '.'; i++) {
+				if (str[i] >= 'a' && str[i] <= 'z') {
+					alphabet[str[i] - 'a']++;
+				}
+				else if (str[i] >= 'A' && str[i] <= 'Z') {
+					alphabet[str[i] - 'A' + 26]++;
+				}
+			}
+			for (i = 0; i < 52; i++) {
+				if (i <= 25) {
+					printf("%c: %d ", i + 'a', alphabet[i]);
+				}
+				else if (i > 25) {
+					printf("%c: %d ", i - 26 + 'A', alphabet[i]);
+				}
+			}
 		}
-		printf("%s\n", str);
 		printf("command: ");
 		command = getchar();
 	}
-	
+
 	return 0;
 }
