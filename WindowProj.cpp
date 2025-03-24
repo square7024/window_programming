@@ -10,7 +10,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdParam, int nCmdShow)
 {
 	HWND hWnd;
-	MSG message;
+	MSG Message;
 	WNDCLASSEX WndClass;
 	g_hInst = hInstance;
 
@@ -40,7 +40,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdPar
 	return Message.wParam;
 }
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPARAM)
+LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
 	HDC hDC;
