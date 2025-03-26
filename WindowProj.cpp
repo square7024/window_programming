@@ -22,7 +22,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdPar
 	WndClass.hInstance = hInstance;
 	WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	WndClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
 	WndClass.lpszMenuName = NULL;
 	WndClass.lpszClassName = IpszClass;
 	WndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
@@ -44,13 +44,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
 	HDC hDC;
-	TCHAR temp[] = TEXT("Hello world!");
-	int x = 0, y = 0;
 
 	switch (iMessage) {
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
-		TextOut(hDC, x, y, temp, lstrlen(temp));
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_DESTROY:
