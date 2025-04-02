@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define MAX_LINE 10
+
 HINSTANCE g_hInst;
 LPCTSTR IpszClass = L"Window Class Name";
 LPCTSTR	IpszWindowName = L"Window Programming Lab";
@@ -48,21 +50,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hDC;
 	static int count = 0;
-	static TCHAR str[80];
-	srand(time(NULL));
+	static int line = 0;
+	static TCHAR str[MAX_LINE][80];
 	static int xPos = 400;
 	static int yPos = 300;
 	int yPos1 = 300, yPos2 = 300;
-	int r = rand() % 256;
-	int g = rand() % 256;
-	int b = rand() % 256;
+	static COLORREF color[MAX_LINE];
 
 	switch (iMessage) {
+	case WM_CREATE:
+		srand(time(NULL));
+		for (int i = 0; i < MAX_LINE; i++) {
+			color[i] = RGB(rand() % 256, rand() % 256, rand() % 256);
+		}
+		break;
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
-		SetTextColor(hDC, RGB(r, g, b));
-		TextOut(hDC, xPos, yPos1, str, _tcslen(str));
-		TextOut(hDC, xPos, yPos2, str, _tcslen(str));
+		SetTextColor(hDC, color[line]);
+		for (int i = 0; i < line; i++) {
+			TextOut(hDC, xPos, yPos1, str[i], _tcslen(str[i]));
+			TextOut(hDC, xPos, yPos2, str[i], _tcslen(str[i]));
+		}
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_CHAR:
@@ -71,21 +79,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			count--;
 		}
 		else if (wParam == VK_RETURN) {
-			xPos = xPos - 10;
+			line++;
+			xPos = xPos - 50;
 			yPos1 = yPos1 - 20;
 			yPos2 = yPos2 + 20;
-			int r = rand() % 256;
-			int g = rand() % 256;
-			int b = rand() % 256;
 		}
 		else if (wParam == VK_ESCAPE) {
 			PostQuitMessage(0);
 			return 0;
 		}
-		else {
-			str[count++] = wParam;
+		else if (wParam == VK_F1) {
+
 		}
-		str[count] = '\0';
+		else {
+			str[line][count++] = wParam;
+		}
+		str[line][count] = '\0';
 		InvalidateRect(hWnd, NULL, true);
 		ReleaseDC(hWnd, hDC);
 		break;
