@@ -8,9 +8,6 @@ LPCTSTR IpszWindowName = L"Window Programming Lab";
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam);
 
-TCHAR textBuffer[10][31] = { 0 };
-int x = 0, y = 0; // 글자 인덱스 기준 위치
-
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdParam, int nCmdShow)
 {
     HWND hWnd;
@@ -45,6 +42,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdPar
     return (int)Message.wParam;
 }
 
+TCHAR text[10][31] = { 0 };
+int x = 0, y = 0;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 {
     static SIZE size;
@@ -56,16 +56,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
         CreateCaret(hWnd, NULL, 2, 20);
         ShowCaret(hWnd);
         break;
-
     case WM_CHAR:
         if (wParam == VK_BACK) {
             if (x > 0) {
                 x--;
-                textBuffer[y][x] = '\0';
+                text[y][x] = '\0';
             }
             else if (y > 0) {
                 y--;
-                x = _tcslen(textBuffer[y]);
+                if (_tcslen(text[y]) >= 29) {
+                    text[y][29] = '\0';
+                }
+                x = _tcslen(text[y]);
             }
         }
         else if (wParam == VK_RETURN) {
@@ -73,19 +75,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
             y++;
             if (y >= 10) {
                 y = 0;
-                textBuffer[y][0] = '\0'; // 덮어쓰기
+                text[y][0] = '\0';
             }
         }
-        else if (wParam >= 32 && wParam <= 126) {
-            textBuffer[y][x++] = (TCHAR)wParam;
-            textBuffer[y][x] = '\0';
-
-            if (x >= 30) {
-                x = 0;
-                y++;
-                if (y >= 10) y = 0;
-                textBuffer[y][0] = '\0';
-            }
+        else
+        text[y][x++] = wParam;
+        text[y][x] = '\0';
+        if (x >= 30) {
+            x = 0;
+            y++;
+            if (y >= 10) y = 0;
+            text[y][0] = '\0';
         }
         InvalidateRect(hWnd, NULL, TRUE);
         break;
@@ -93,9 +93,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         hDC = BeginPaint(hWnd, &ps);
         for (int i = 0; i < 10; i++) {
-            TextOut(hDC, 0, i * 20, textBuffer[i], _tcslen(textBuffer[i]));
+            TextOut(hDC, 0, i * 20, text[i], _tcslen(text[i]));
         }
-        GetTextExtentPoint32(hDC, textBuffer[y], x, &size);
+        GetTextExtentPoint32(hDC, text[y], x, &size);
         SetCaretPos(size.cx, y * 20);
 
         EndPaint(hWnd, &ps);
