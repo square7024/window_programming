@@ -1,0 +1,111 @@
+#include <windows.h>
+#include <tchar.h>
+#include <stdio.h>
+
+HINSTANCE g_hInst;
+LPCTSTR IpszClass = L"Window Class Name";
+LPCTSTR IpszWindowName = L"Window Programming Lab";
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam);
+
+TCHAR textBuffer[10][31] = { 0 };
+int x = 0, y = 0; // 글자 인덱스 기준 위치
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdParam, int nCmdShow)
+{
+    HWND hWnd;
+    MSG Message;
+    WNDCLASSEX WndClass;
+    g_hInst = hInstance;
+
+    WndClass.cbSize = sizeof(WNDCLASSEX);
+    WndClass.style = CS_HREDRAW | CS_VREDRAW;
+    WndClass.lpfnWndProc = WndProc;
+    WndClass.cbClsExtra = 0;
+    WndClass.cbWndExtra = 0;
+    WndClass.hInstance = hInstance;
+    WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    WndClass.hCursor = LoadCursor(NULL, IDC_IBEAM);
+    WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    WndClass.lpszMenuName = NULL;
+    WndClass.lpszClassName = IpszClass;
+    WndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    RegisterClassEx(&WndClass);
+
+    hWnd = CreateWindow(IpszClass, IpszWindowName, WS_OVERLAPPEDWINDOW,
+        100, 100, 600, 400, NULL, NULL, hInstance, NULL);
+
+    ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
+
+    while (GetMessage(&Message, NULL, 0, 0)) {
+        TranslateMessage(&Message);
+        DispatchMessage(&Message);
+    }
+    return (int)Message.wParam;
+}
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
+{
+    static SIZE size;
+    HDC hDC;
+    PAINTSTRUCT ps;
+
+    switch (iMessage) {
+    case WM_CREATE:
+        CreateCaret(hWnd, NULL, 2, 20);
+        ShowCaret(hWnd);
+        break;
+
+    case WM_CHAR:
+        if (wParam == VK_BACK) {
+            if (x > 0) {
+                x--;
+                textBuffer[y][x] = '\0';
+            }
+            else if (y > 0) {
+                y--;
+                x = _tcslen(textBuffer[y]);
+            }
+        }
+        else if (wParam == VK_RETURN) {
+            x = 0;
+            y++;
+            if (y >= 10) {
+                y = 0;
+                textBuffer[y][0] = '\0'; // 덮어쓰기
+            }
+        }
+        else if (wParam >= 32 && wParam <= 126) {
+            textBuffer[y][x++] = (TCHAR)wParam;
+            textBuffer[y][x] = '\0';
+
+            if (x >= 30) {
+                x = 0;
+                y++;
+                if (y >= 10) y = 0;
+                textBuffer[y][0] = '\0';
+            }
+        }
+        InvalidateRect(hWnd, NULL, TRUE);
+        break;
+
+    case WM_PAINT:
+        hDC = BeginPaint(hWnd, &ps);
+        for (int i = 0; i < 10; i++) {
+            TextOut(hDC, 0, i * 20, textBuffer[i], _tcslen(textBuffer[i]));
+        }
+        GetTextExtentPoint32(hDC, textBuffer[y], x, &size);
+        SetCaretPos(size.cx, y * 20);
+
+        EndPaint(hWnd, &ps);
+        break;
+
+    case WM_DESTROY:
+        HideCaret(hWnd);
+        DestroyCaret();
+        PostQuitMessage(0);
+        return 0;
+    }
+    return DefWindowProc(hWnd, iMessage, wParam, lParam);
+}
