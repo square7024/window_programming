@@ -1,0 +1,192 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <conio.h>
+#include <stdlib.h>
+
+#define PROB 1 // 각각의 문제를 구현하고 해당 문제 번호를 변경하여 테스트
+
+#if PROB == 1
+// 1번 문제를 해결하기 위한 프로그램 작성
+
+#define MAX_LIST_SIZE 100
+
+typedef int element;
+typedef struct {
+	element array[MAX_LIST_SIZE];
+	int size;
+} SortedList;
+
+void error(char *message) {
+	fprintf(stderr, "%s\n", message);
+	exit(1);
+}
+
+void clear(SortedList* L) {
+	L->size = 0;
+}
+
+int is_empty(SortedList* L) {
+	return L->size == 0;
+}
+
+int is_full(SortedList* L) {
+	return L->size == MAX_LIST_SIZE;
+}
+
+int get_length(SortedList* L) {
+	return L->size;
+}
+
+element get_entry(SortedList* L, int pos) {
+	if (pos < 0 || pos >= L->size) {
+		error("위치 오류");
+	}
+	return L->array[pos];
+}
+
+void display(SortedList* L) {
+	int i;
+	for (i = 0; i < L->size; i++) {
+		printf("%d->", L->array[i]);
+	}
+	printf("\n");
+}
+
+void add(SortedList* L, element item) {
+	if (!is_full(L)) {
+		int pos = -1;
+		for (int j = 0; j < L->size; j++) {
+			if (L->array[j] >= item) {
+				pos = j;
+				break;
+			}
+		}
+		if (pos == -1) pos = L->size;
+
+		for (int i = L->size - 1; i >= pos; i--) {
+			L->array[i + 1] = L->array[i];
+		}
+		L->array[pos] = item;
+		L->size++;
+	}
+}
+
+int delete(SortedList* L, element item) {
+	int pos = -1;
+
+	for (int j = 0; j < L->size; j++) {
+		if (L->array[j] == item) {
+			pos = j;
+			break;
+		}
+	}
+	if (pos == -1) {
+		error("존재하지 않음");
+		pos = -1;
+		return pos;
+	}
+	for (int i = pos; i < (L->size - 1); i++)
+		L->array[i] = L->array[i + 1];
+	L->size--;
+	return pos;
+}
+
+int is_in_list(SortedList* L, element item) {
+	int pos = -1;
+
+	for (int i = 0; i < L->size; i++) {
+		if (L->array[i] == item) {
+			pos = i;
+			break;
+		}
+	}
+	return pos;
+}
+
+SortedList* reverse(SortedList* L) {
+	static SortedList reversedList;
+	reversedList.size = L->size;
+
+	for (int i = 0; i < L->size; i++) {
+		reversedList.array[i] = L->array[L->size - 1 - i];
+	}
+
+	return &reversedList;
+}
+
+int main(void) {
+	int item;
+	char ch;
+	SortedList list;
+	SortedList* rList;
+	//필요한 초기화 코드 추가
+	clear(&list);
+	srand(100);
+	while (1) {
+		item = rand();
+		add(&list, item);
+		display(&list);
+		ch = getchar();
+		if (ch == 'q') break;
+	}
+	printf("get_length : %d \n", get_length(&list));
+	printf("is_empty : %d, is_full : %d \n",
+		is_empty(&list), is_full(&list));
+	printf("get_entry : %d위치의 데이터는 %d\n", 5, get_entry(&list, 5));
+	printf("is_in_list : %d의 위치는 %d \n", 5415, is_in_list(&list, 5415));
+	printf("is_in_list : %d의 위치는 %d \n", 10, is_in_list(&list, 10));
+	printf("delete : %d의 위치는 %d \n", 5415, delete(&list, 5415));
+	display(&list);
+	rList = reverse(&list);
+	display(rList);
+	printf("call clear\n");
+	clear(&list);
+	display(&list);
+	printf("get_length : %d \n", get_length(&list));
+	//종료하기 전에 수행해야 할 코드 추가
+	
+	return 0;
+}
+
+#elif PROB == 2
+// 2번 문제를 해결하기 위한 프로그램 작성
+
+
+#define MAX_LIST_SIZE 100
+typedef { ... } SortedList;
+
+int main(void) {
+	int item;
+	char ch;
+	SortedList list;
+	SortedList* rList;
+	//필요한 초기화 코드 추가
+	...
+		srand(100);
+	while (1) {
+		item = rand();
+		add(&list, item);
+		display(&list);
+		ch = getch();
+		if (ch == 'q') break;
+	}
+	printf("get_length : %d \n", get_length(&list));
+	printf("is_empty : %d, is_full : %d \n",
+		is_empty(&list), is_full(&list));
+	printf("get_entry : %d위치의 데이터는 %d\n", 5, get_entry(&list, 5));
+	printf("is_in_list : %d의 위치는 %d \n", 5415, is_in_list(&list, 5415));
+	printf("is_in_list : %d의 위치는 %d \n", 10, is_in_list(&list, 10));
+	printf("delete : %d의 위치는 %d \n", 5415, delete(&list, 5415));
+	display(&list);
+	rList = reverse(&list);
+	display(rList);
+	printf("call clear\n");
+	clear(&list);
+	display(&list);
+	printf("get_length : %d \n", get_length(&list));
+	//종료하기 전에 수행해야 할 코드 추가
+	...
+		return 0;
+}
+
+#endif
