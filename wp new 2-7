@@ -44,6 +44,35 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdPar
 
 TCHAR text[10][31] = { 0 };
 int x = 0, y = 0;
+int insertON = 0;
+
+void ShiftRight(TCHAR* line, int pos) {
+    int len = _tcslen(line);
+    if (len >= 30) return;
+    for (int i = len; i >= pos; i--) {
+        line[i + 1] = line[i];
+    }
+}
+
+void ShiftLeft(TCHAR* line, int pos) {
+    int len = _tcslen(line);
+    for (int i = pos; i <= len; i++) {
+        line[i] = line[i + 1];
+    }
+}
+
+void DeleteWord(HWND hWnd) {
+    int start = x;
+    while (start > 0 && text[y][start - 1] != ' ') start--;
+    int end = x;
+    while (text[y][end] != '\0' && text[y][end] != ' ') end++;
+    int length = end - start;
+    for (int i = 0; i < length; i++) {
+        ShiftLeft(text[y], start);
+    }
+    x = start;
+    InvalidateRect(hWnd, NULL, TRUE);
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 {
@@ -59,8 +88,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
     case WM_CHAR:
         if (wParam == VK_BACK) {
             if (x > 0) {
+                ShiftLeft(text[y], x - 1);
                 x--;
-                text[y][x] = '\0';
             }
             else if (y > 0) {
                 y--;
@@ -78,18 +107,72 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
                 text[y][0] = '\0';
             }
         }
-        else
-        text[y][x++] = wParam;
-        text[y][x] = '\0';
-        if (x >= 30) {
+        else if (wParam == VK_ESCAPE) {
+            for (int i = 0; i < 10; i++) {
+                text[i][0] = '\0';
+            }
             x = 0;
-            y++;
-            if (y >= 10) y = 0;
-            text[y][0] = '\0';
+            y = 0;
         }
+        else if (wParam == VK_TAB) {
+            for (int i = 0; i < 5; i++) {
+                if (_tcslen(text[y]) < 30) {
+                    ShiftRight(text[y], x);
+                    text[y][x++] = ' ';
+                }
+            }
+        }
+        else if (_tcslen(text[y]) < 30 || insertON) {
+            if (insertON && _tcslen(text[y]) < 30) {
+                ShiftRight(text[y], x);
+            }
+            text[y][x++] = wParam;
+            text[y][x] = '\0';
+            if (x >= 30) {
+                x = 0;
+                y++;
+                if (y >= 10) y = 0;
+                text[y][0] = '\0';
+            }
+        }
+        
         InvalidateRect(hWnd, NULL, TRUE);
         break;
-
+    case WM_KEYDOWN:
+        switch (wParam) {
+        case VK_HOME:
+            x = 0;
+            break;
+        case VK_END:
+            y = _tcslen(text[y]);
+            break;
+        case VK_LEFT:
+            if (x > 0) x--;
+            break;
+        case VK_RIGHT:
+            if (x < _tcslen(text[y])) x++;
+            break;
+        case VK_UP:
+            y = (y + 9) % 10;
+            if (x > _tcslen(text[y])) x = _tcslen(text[y]);
+            break;
+        case VK_DOWN:
+            y = (y + 1) % 10;
+            if (x > _tcslen(text[y])) x = _tcslen(text[y]);
+            break;
+        case VK_PRIOR:
+            y = (y + 7) % 10;
+            break;
+        case VK_NEXT:
+            y = (y + 3) % 10;
+            break;
+        case VK_DELETE:
+            DeleteWord(hWnd);
+            break;
+        case VK_INSERT:
+            insertON = !insertON;
+            break;
+        }
     case WM_PAINT:
         hDC = BeginPaint(hWnd, &ps);
         for (int i = 0; i < 10; i++) {
