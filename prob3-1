@@ -55,26 +55,80 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		GetClientRect(hWnd, &rectView);
 		x = 20; y = 20;
 		leftright = 0;
+		updown = 0;
+		speed = 100;
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		Ellipse(hDC, x - 20, y - 20, x + 20, y + 20);
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_KEYDOWN:
-		if (wParam == 'h' || wParam == 'H')
-			SetTimer(hWnd, 1, 70, NULL);
+		if (wParam == 'h' || wParam == 'H') {
+			SetTimer(hWnd, 1, speed, NULL);
+			KillTimer(hWnd, 2);
+		}
+		else if (wParam == 'v' || wParam == 'V') {
+			SetTimer(hWnd, 2, speed, NULL);
+			KillTimer(hWnd, 1);
+		}
+		else if (wParam == 'q' || wParam == 'Q') {
+			KillTimer(hWnd, 1);
+			KillTimer(hWnd, 2);
+			PostQuitMessage(0);
+			break;
+		}
+		else if (wParam == 'p' || wParam == 'P') {
+			KillTimer(hWnd, 1);
+			KillTimer(hWnd, 2);
+		}
+		else if (wParam == '=') {
+			speed += 10;
+		}
 		break;
 	case WM_TIMER:
-		if (leftright == 0) x += 40;
-		//else (leftright == 1) x += 40;
-		if (x + 20 > rectView.right) {
-			x = 0;
-			y = y + 40;
-			leftright = 1;
+		switch (wParam) {
+		case 1:
+			if (leftright == 0)
+				x += 40;
+			else if (leftright == 1)
+				x -= 40;
+			if (x + 20 > rectView.right) {
+				x = 780;
+				y += 40;
+				leftright = 1;
+			}
+			else if (x - 20 < rectView.left) {
+				x = 0;
+				y = y + 40;
+				leftright = 0;
+			}
+			break;
+		case 2:
+			if (updown == 0)
+				y += 40;
+			else if (updown == 1)
+				y -= 40;
+			if (y + 20 > rectView.bottom) {
+				y = 580;
+				x += 40;
+				updown = 1;
+			}
+			else if (y - 20 < rectView.top) {
+				y = 0;
+				x = x + 40;
+				updown = 0;
+			}
 		}
 		InvalidateRect(hWnd, NULL, TRUE);
+		break;
+	case WM_LBUTTONDOWN:
+		x = LOWORD(lParam);
+		y = HIWORD(lParam);
+		InvalidateRect(hWnd, NULL, TRUE);
+		break;
 	case WM_DESTROY:
 		KillTimer(hWnd, 1);
+		KillTimer(hWnd, 2);
 		PostQuitMessage(0);
 		break;
 	}
