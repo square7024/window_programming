@@ -49,6 +49,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 	static int speed;
 	static int leftright; //0:right, 1:left, 2:stop
 	static int updown; // 0:down, 1:up, 2:stop
+	static int current_timer = 0;
 
 	switch (iMessage) {
 	case WM_CREATE:
@@ -60,14 +61,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hDC = BeginPaint(hWnd, &ps);
 		Ellipse(hDC, x - 20, y - 20, x + 20, y + 20);
+		for (int i = 0; i < 21; i++) {
+			MoveToEx(hDC, i * 40, 0, NULL);
+			LineTo(hDC, i * 40, 600);
+		}
+		for (int j = 0; j < 16; j++) {
+			MoveToEx(hDC, 0, j * 40, NULL);
+			LineTo(hDC, 800, j * 40);
+		}
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_KEYDOWN:
 		if (wParam == 'h' || wParam == 'H') {
+			current_timer = 1;
 			SetTimer(hWnd, 1, speed, NULL);
 			KillTimer(hWnd, 2);
 		}
 		else if (wParam == 'v' || wParam == 'V') {
+			current_timer = 2;
 			SetTimer(hWnd, 2, speed, NULL);
 			KillTimer(hWnd, 1);
 		}
@@ -78,11 +89,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		else if (wParam == 'p' || wParam == 'P') {
+			current_timer = 0;
 			KillTimer(hWnd, 1);
 			KillTimer(hWnd, 2);
 		}
-		else if (wParam == '=') {
+		else if (wParam == '=' || wParam == '+') {
 			speed += 10;
+			if (current_timer == 1) {
+				KillTimer(hWnd, 1);
+				SetTimer(hWnd, 1, speed, NULL);
+			}
+			else if (current_timer == 2) {
+				KillTimer(hWnd, 2);
+				SetTimer(hWnd, 2, speed, NULL);
+			}
+		}
+		else if (wParam == '-' || wParam == '_') {
+			speed -= 10;
+			if (current_timer == 1) {
+				KillTimer(hWnd, 1);
+				SetTimer(hWnd, 1, speed, NULL);
+			}
+			else if (current_timer == 2) {
+				KillTimer(hWnd, 2);
+				SetTimer(hWnd, 2, speed, NULL);
+			}
 		}
 		break;
 	case WM_TIMER:
@@ -98,9 +129,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 				leftright = 1;
 			}
 			else if (x - 20 < rectView.left) {
-				x = 0;
+				x = 20;
 				y = y + 40;
 				leftright = 0;
+			}
+			if (y - 20 > rectView.bottom) {
+				y = 20;
+				x += 40;
 			}
 			break;
 		case 2:
@@ -117,6 +152,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 				y = 0;
 				x = x + 40;
 				updown = 0;
+			}
+			if (x - 20 > rectView.right) {
+				x = 20;
+				y += 40;
 			}
 		}
 		InvalidateRect(hWnd, NULL, TRUE);
