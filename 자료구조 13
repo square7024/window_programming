@@ -1,0 +1,97 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+typedef int element;
+
+void selection_sort(element* list, element* sorted_list, int size) {
+	for (int i = 0; i < size; i++) {
+		sorted_list[i] = list[i];
+	}
+
+	for (int i = 0; i < size - 1; i++) {
+		int least = i;
+		for (int j = i + 1; j < size; j++) {
+			if (sorted_list[j] < sorted_list[least])
+				least = j;
+		}
+
+		element temp = sorted_list[i];
+		sorted_list[i] = sorted_list[least];
+		sorted_list[least] = temp;
+	}
+}
+
+void upheap(element* arr, int size, int i) {
+	int max = i;
+	int left = 2 * i + 1;
+	int right = 2 * i + 2;
+
+	if (left < size && arr[left] > arr[max])
+		max = left;
+	if (right < size && arr[right] > arr[max])
+		max = right;
+
+	if (max != i) {
+		element temp = arr[i];
+		arr[i] = arr[max];
+		arr[max] = temp;
+		upheap(arr, size, max);
+	}
+}
+
+void heap_sort(element* list, element* sorted_list, int size) {
+	for (int i = 0; i < size; i++) {
+		sorted_list[i] = list[i];
+	}
+
+	for (int i = size / 2 - 1; i >= 0; i--) {
+		upheap(sorted_list, size, i);
+	}
+
+	for (int i = size - 1; i > 0; i--) {
+		element temp = sorted_list[0];
+		sorted_list[0] = sorted_list[i];
+		sorted_list[i] = temp;
+		upheap(sorted_list, i, 0);
+	}
+}
+
+#define SIZE 10
+
+int main(void)
+{
+	element* list, * sorted_list; //원데이터와 정렬된 데이터 각각 저장용
+	int i, s_time, e_time;
+
+	srand(100);
+	list = (element*)malloc(sizeof(element) * SIZE);
+	sorted_list = (element*)malloc(sizeof(element) * SIZE);
+
+	for (i = 0; i < SIZE; i++) list[i] = rand();
+
+	printf("정수형 데이터 %d개 정렬 \n", SIZE);
+	if (SIZE < 100) {
+		for (int i = 0; i < SIZE; i++) printf("%d ", list[i]);
+		printf("\n\n");
+	}
+
+	s_time = clock();
+	heap_sort(list, sorted_list, SIZE);
+	e_time = clock();
+	printf("Heap Sort 걸린 시간 : %d msec\n", e_time - s_time);
+	if (SIZE < 100) {
+		for (int i = 0; i < SIZE; i++) printf("%d ", sorted_list[i]);
+		printf("\n\n");
+	}
+
+	s_time = clock();
+	selection_sort(list, sorted_list, SIZE);
+	e_time = clock();
+	printf("Selection Sort 걸린 시간 : %d msec\n", e_time - s_time);
+	if (SIZE < 100) {
+		for (int i = 0; i < SIZE; i++) printf("%d ", sorted_list[i]);
+		printf("\n");
+	}
+	return 0;
+}
