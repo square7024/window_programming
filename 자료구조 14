@@ -1,0 +1,60 @@
+#include <stdio.h>
+
+#define MAX_ELEMENT 200
+typedef struct TreeNode {
+	int weight;
+	char ch;
+	struct TreeNode* left;
+	struct TreeNode* right;
+} TreeNode;
+typedef TreeNode* element;
+typedef struct {
+	element heap[MAX_ELEMENT];
+	int heap_size;
+} HeapType;
+
+HeapType* create() {
+	return (HeapType*)malloc(sizeof(HeapType));
+}
+
+void init(HeapType* h) {
+	h->heap_size = 0;
+}
+
+
+
+TreeNode* make_huffman_tree(int freq[], char ch_list, int n) {
+
+}
+
+void huffman_decode(TreeNode* head, char* str) {
+
+}
+
+void destroy_tree(TreeNode* head) {
+	if (head == NULL) return;
+	destroy_tree(head->left);
+	destroy_tree(head->right);
+	free(head);
+}
+
+int main(void)
+{
+	char ch_list[] = { 's', 'i', 'n', 't', 'e' };
+	int freq[] = { 4, 6, 8, 12, 15 };
+	TreeNode* head;
+
+	printf("허프만 코드를 위한 트리 생성\n");
+	char* str = "1110101010000101";
+	head = make_huffman_tree(freq, ch_list, 5);
+
+	printf("\n허프만 코드를 이용한 디코딩 :\n");
+	huffman_decode(head, str);
+
+	printf("\n허프만 코드를 이용한 디코딩 :\n");
+	char* str2 = "11111111111";
+	huffman_decode(head, str2);
+
+	destroy_tree(head);
+	return 0;
+}
