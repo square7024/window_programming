@@ -24,7 +24,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdPar
 	WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
 	WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	WndClass.lpszMenuName = NULL;
+	WndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);
 	WndClass.lpszClassName = IpszClass;
 	WndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
 	RegisterClassEx(&WndClass);
@@ -69,29 +69,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		hDC = BeginPaint(hWnd, &ps);
 		hMemDC = CreateCompatibleDC(hDC);
 		(HBITMAP)SelectObject(hMemDC, hBitmap);
-		if (mode == 0) {
-			if (!inversion) StretchBlt(hDC, 0, 0, x, y, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			else if (inversion) StretchBlt(hDC, 0, 0, x, y, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, NOTSRCCOPY);
-		}
-		else if (mode == 1)
-			StretchBlt(hDC, 0, 0, rect.right, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-		else if (mode == 2) {
-			if (!inversion) StretchBlt(hDC, 0, 0, halfWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			else if (inversion && selection == 1) StretchBlt(hDC, 0, 0, halfWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, NOTSRCCOPY);
-			if (!inversion) StretchBlt(hDC, halfWidth, 0, halfWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			else if (inversion) StretchBlt(hDC, halfWidth, 0, halfWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, NOTSRCCOPY);
-		}
-		else if (mode == 3) {
-			StretchBlt(hDC, 0, 0, onethirdWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			StretchBlt(hDC, onethirdWidth, 0, onethirdWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			StretchBlt(hDC, onethirdWidth * 2, 0, onethirdWidth, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-		}
-		else if (mode == 4) {
-			StretchBlt(hDC, 0, 0, halfWidth, halfHeight, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			StretchBlt(hDC, halfWidth, 0, halfWidth, halfHeight, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			StretchBlt(hDC, 0, halfHeight, halfWidth, halfHeight, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-			StretchBlt(hDC, halfWidth, halfHeight, halfWidth, halfHeight, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
-		}
+
+		StretchBlt(hDC, 0, 0, rect.right, rect.bottom, hMemDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
+
 		if (selection != 0) {
 			if (mode == 0 && selection == 1) {
 				rx1 = 0;
@@ -171,29 +151,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			DeleteObject(hPen);
 			SelectObject(hDC, oldBrush);
 		}
-		
+
 		DeleteDC(hMemDC);
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_CHAR:
-		if (wParam == 'a' || wParam == 'A') {
-			if (!mode) mode = 1;
-			else if (mode) mode = 0;
-			selection = 0;
-			inversion = 0;
-			InvalidateRect(hWnd, NULL, TRUE);
-		}
-		else if (wParam == '=') {
-			x += 10;
-			y += 10;
-			InvalidateRect(hWnd, NULL, TRUE);
-		}
-		else if (wParam == '-') {
-			x -= 10;
-			y -= 10;
-			InvalidateRect(hWnd, NULL, TRUE);
-		}
-		else if (wParam == '1') {
+		if (wParam == '1') {
 			mode = 0;
 			selection = 0;
 			inversion = 0;
@@ -229,41 +192,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		break;
+	case WM_COMMAND:
+		break;
 	case WM_LBUTTONDOWN:
 		mx = LOWORD(lParam);
 		my = HIWORD(lParam);
-		if (mode == 0) {
-			if (mx < x && my < y)
-				selection = 1;
-		}
-		else if (mode == 2) {
-			if (mx < halfWidth)
-				selection = 1;
-			else if (mx >= halfWidth)
-				selection = 2;
-		}
-		else if (mode == 3) {
-			if (mx < onethirdWidth)
-				selection = 1;
-			else if (mx >= onethirdWidth && mx < (onethirdWidth * 2))
-				selection = 2;
-			else if (mx >= (onethirdWidth * 2))
-				selection = 3;
-		}
-		else if (mode == 4) {
-			if (mx < halfWidth) {
-				if (my < halfHeight)
-					selection = 1;
-				else if (my >= halfHeight)
-					selection = 3;
-			}
-			else if (mx >= halfWidth) {
-				if (my < halfHeight)
-					selection = 2;
-				else if (my >= halfHeight)
-					selection = 4;
-			}
-		}
 		InvalidateRect(hWnd, NULL, TRUE);
 		break;
 	case WM_DESTROY:
