@@ -1,0 +1,509 @@
+#include <windows.h>
+#include <tchar.h>
+#include "resource.h"
+
+HINSTANCE g_hInst;
+LPCTSTR IpszClass = L"Window Class Name";
+LPCTSTR	IpszWindowName = L"Window Programming Lab";
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam);
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPreInstance, LPSTR IpszCmdParam, int nCmdShow)
+{
+	HWND hWnd;
+	MSG Message;
+	WNDCLASSEX WndClass;
+	g_hInst = hInstance;
+
+	WndClass.cbSize = sizeof(WNDCLASSEX);
+	WndClass.style = CS_HREDRAW | CS_VREDRAW;
+	WndClass.lpfnWndProc = WndProc;
+	WndClass.cbClsExtra = 0;
+	WndClass.cbWndExtra = 0;
+	WndClass.hInstance = hInstance;
+	WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+	WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	WndClass.lpszMenuName = NULL;
+	WndClass.lpszClassName = IpszClass;
+	WndClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+	RegisterClassEx(&WndClass);
+
+	hWnd = CreateWindow(IpszClass, IpszWindowName, WS_OVERLAPPEDWINDOW, 0, 0, 1280, 1000, NULL, NULL, hInstance, NULL);
+
+	ShowWindow(hWnd, nCmdShow);
+	UpdateWindow(hWnd);
+
+	while (GetMessage(&Message, 0, 0, 0)) {
+		TranslateMessage(&Message);
+		DispatchMessage(&Message);
+	}
+	return (int)Message.wParam;
+}
+
+// 전역 변수 (WndProc 위쪽에 추가하세요)
+HBITMAP hBitmap1, hBitmap2;
+int currentImage = 1;
+// 사각형 관련 변수
+BOOL isDragging = FALSE;
+POINT startPt = { 0, 0 };
+POINT endPt = { 0, 0 };
+// 돋보기 영역과 상태 관련 변수
+RECT magnifierRect = { 0, 0, 0, 0 }; // 초기값 예시
+float scale = 1.0f;
+bool isEnlarging = false;
+
+#define MAX_PASTE 5
+
+HBITMAP copiedBitmap = NULL;
+POINT pastePositions[MAX_PASTE];
+int pasteCount = 0;
+
+bool isInverted = false;
+
+bool isBouncing = false;
+int dx = 5, dy = 5;  // 움직이는 속도
+#define TIMER_ID 1
+
+bool isScaling = false;
+int scaleDir = 1; // 1이면 커짐, -1이면 작아짐
+#define SCALE_TIMER_ID 2
+
+const int scaleWidths[] = { 60, 100, 140, 180, 220 };
+const int NUM_STEPS = sizeof(scaleWidths) / sizeof(scaleWidths[0]);
+int currentStep = 2;
+int stepDir = 1;
+
+enum DragMode { DRAG_NONE, DRAG_MOVE, DRAG_RESIZE };
+DragMode dragMode = DRAG_NONE;
+
+POINT dragStart; // 마우스 누른 위치
+RECT originalRect; // 드래그 시작 시점의 사각형
+
+POINT lastMousePos = { 0, 0 }; // 마우스 이전 위치
+
+
+LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
+{
+	static RECT rect;
+	static BITMAP bmp;
+
+	switch (iMessage) {
+	case WM_CREATE:
+	{
+		GetClientRect(hWnd, &rect);
+		hBitmap1 = LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_BITMAP1));
+		hBitmap2 = LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_BITMAP2));
+		break;
+	}
+	case WM_PAINT:
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+
+		// 1. 더블 버퍼링을 위한 메모리 DC 생성
+		HDC bufferDC = CreateCompatibleDC(hdc);
+		HBITMAP bufferBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+		HBITMAP oldBufferBitmap = (HBITMAP)SelectObject(bufferDC, bufferBitmap);
+
+		// 2. 백버퍼에 기본 배경 그리기
+		HDC memDC = CreateCompatibleDC(bufferDC);
+		HBITMAP hBitmap = (currentImage == 1) ? hBitmap1 : hBitmap2;
+		SelectObject(memDC, hBitmap);
+		GetObject(hBitmap, sizeof(BITMAP), &bmp);
+
+		// 배경 출력
+		StretchBlt(bufferDC, 0, 0, rect.right, rect.bottom,
+			memDC, 0, 0, bmp.bmWidth, bmp.bmHeight, SRCCOPY);
+
+		// 돋보기 확대/축소
+		// 돋보기 확대/축소
+		if (isEnlarging &&
+			magnifierRect.right > magnifierRect.left &&
+			magnifierRect.bottom > magnifierRect.top)
+		{
+			int srcX = magnifierRect.left * bmp.bmWidth / rect.right;
+			int srcY = magnifierRect.top * bmp.bmHeight / rect.bottom;
+			int srcW = (magnifierRect.right - magnifierRect.left) * bmp.bmWidth / rect.right;
+			int srcH = (magnifierRect.bottom - magnifierRect.top) * bmp.bmHeight / rect.bottom;
+
+			int dstW = (int)((magnifierRect.right - magnifierRect.left) * scale);
+			int dstH = (int)((magnifierRect.bottom - magnifierRect.top) * scale);
+			int dstX = magnifierRect.left - (dstW - (magnifierRect.right - magnifierRect.left)) / 2;
+			int dstY = magnifierRect.top - (dstH - (magnifierRect.bottom - magnifierRect.top)) / 2;
+
+			// 클리핑 영역 설정
+			HRGN hClipRgn = CreateRectRgn(
+				magnifierRect.left, magnifierRect.top,
+				magnifierRect.right, magnifierRect.bottom);
+			SelectClipRgn(bufferDC, hClipRgn);
+
+			// 확대된 이미지 출력
+			StretchBlt(bufferDC, dstX, dstY, dstW, dstH,
+				memDC, srcX, srcY, srcW, srcH, SRCCOPY);
+
+			// 색상 반전
+			if (isInverted) {
+				BitBlt(bufferDC, dstX, dstY, dstW, dstH,
+					bufferDC, dstX, dstY, DSTINVERT);
+			}
+
+			// 클리핑 해제
+			SelectClipRgn(bufferDC, NULL);
+			DeleteObject(hClipRgn);
+		}
+
+
+		// 돋보기 테두리
+		if (!isDragging &&
+			magnifierRect.right > magnifierRect.left &&
+			magnifierRect.bottom > magnifierRect.top)
+		{
+			HPEN hPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+			HBRUSH hBrush = (HBRUSH)GetStockObject(HOLLOW_BRUSH);
+			HPEN oldPen = (HPEN)SelectObject(bufferDC, hPen);
+			HBRUSH oldBrush = (HBRUSH)SelectObject(bufferDC, hBrush);
+
+			Rectangle(bufferDC, magnifierRect.left, magnifierRect.top,
+				magnifierRect.right, magnifierRect.bottom);
+
+			SelectObject(bufferDC, oldPen);
+			SelectObject(bufferDC, oldBrush);
+			DeleteObject(hPen);
+		}
+
+		// 3. 백버퍼 → 실제 화면에 복사
+		BitBlt(hdc, 0, 0, rect.right, rect.bottom, bufferDC, 0, 0, SRCCOPY);
+
+		// 4. 리소스 정리
+		SelectObject(bufferDC, oldBufferBitmap);
+		DeleteObject(bufferBitmap);
+		DeleteDC(bufferDC);
+		DeleteDC(memDC);
+
+		// 붙여넣기된 이미지 출력
+		if (copiedBitmap) {
+			HDC pasteDC = CreateCompatibleDC(hdc);
+			HBITMAP old = (HBITMAP)SelectObject(pasteDC, copiedBitmap);
+
+			int pw = (magnifierRect.right - magnifierRect.left) / 2;
+			int ph = (magnifierRect.bottom - magnifierRect.top) / 2;
+
+			for (int i = 0; i < pasteCount; i++) {
+				StretchBlt(hdc,
+					pastePositions[i].x, pastePositions[i].y,
+					pw, ph,
+					pasteDC, 0, 0,
+					pw * 2, ph * 2,
+					SRCCOPY);
+			}
+
+			SelectObject(pasteDC, old);
+			DeleteDC(pasteDC);
+		}
+
+		EndPaint(hWnd, &ps);
+		break;
+	}
+	case WM_CHAR:
+	{
+		if (wParam == '1') {
+			currentImage = 1;
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		else if (wParam == '2') {
+			currentImage = 2;
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		else if (wParam == 'q' || wParam == 'Q') {
+			PostQuitMessage(0);
+		}
+		else if (wParam == 'e' || wParam == 'E') {
+			isEnlarging = true;
+			scale += 0.1f;
+			if (scale >= 2.0f) scale = 1.0f;
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		else if (wParam == 's' || wParam == 'S') {
+			isEnlarging = true;  // 확대/축소 여부와 무관하게 출력 활성화
+			scale -= 0.1f;
+			if (scale <= 0.4f) scale = 1.0f;  // 너무 작으면 원래 크기로 되돌림
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		else if (wParam == 'r' || wParam == 'R') {
+			magnifierRect = { 0, 0, 0, 0 };
+			isEnlarging = false;
+			scale = 1.0f;
+
+			// 복사된 비트맵 삭제
+			if (copiedBitmap) {
+				DeleteObject(copiedBitmap);
+				copiedBitmap = NULL;
+			}
+
+			// 붙여넣은 위치 초기화
+			pasteCount = 0;
+
+			InvalidateRect(hWnd, NULL, FALSE);  // 다시 그리기
+		}
+		else if (wParam == 'b' || wParam == 'B') {
+			isEnlarging = true;
+			scale = 1.0f;
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		else if (wParam == 'c' || wParam == 'C') {
+			// 기존 복사된 이미지 제거
+			if (copiedBitmap) {
+				DeleteObject(copiedBitmap);
+				copiedBitmap = NULL;
+			}
+
+			int width = magnifierRect.right - magnifierRect.left;
+			int height = magnifierRect.bottom - magnifierRect.top;
+
+			if (width > 0 && height > 0) {
+				HDC screenDC = GetDC(hWnd);
+				HDC memDC = CreateCompatibleDC(screenDC);
+				copiedBitmap = CreateCompatibleBitmap(screenDC, width, height);
+				HBITMAP old = (HBITMAP)SelectObject(memDC, copiedBitmap);
+
+				// 원본 이미지 복사
+				HDC srcDC = CreateCompatibleDC(screenDC);
+				HBITMAP srcBitmap = (currentImage == 1) ? hBitmap1 : hBitmap2;
+				SelectObject(srcDC, srcBitmap);
+				GetObject(srcBitmap, sizeof(BITMAP), &bmp);
+
+				int srcX = magnifierRect.left * bmp.bmWidth / rect.right;
+				int srcY = magnifierRect.top * bmp.bmHeight / rect.bottom;
+				int srcW = width * bmp.bmWidth / rect.right;
+				int srcH = height * bmp.bmHeight / rect.bottom;
+
+				StretchBlt(memDC, 0, 0, width, height,
+					srcDC, srcX, srcY, srcW, srcH, SRCCOPY);
+
+				SelectObject(memDC, old);
+				DeleteDC(memDC);
+				DeleteDC(srcDC);
+				ReleaseDC(hWnd, screenDC);
+			}
+		}
+		else if (wParam == 'p' || wParam == 'P') {
+			if (copiedBitmap && pasteCount < MAX_PASTE) {
+				int pw = (magnifierRect.right - magnifierRect.left) / 2;
+				int ph = (magnifierRect.bottom - magnifierRect.top) / 2;
+
+				pastePositions[pasteCount].x = rand() % (rect.right - pw);
+				pastePositions[pasteCount].y = rand() % (rect.bottom - ph);
+				pasteCount++;
+				InvalidateRect(hWnd, NULL, FALSE);
+			}
+		}
+		else if (wParam == 'i' || wParam == 'I') {
+			isInverted = !isInverted;
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		else if (wParam == 'm' || wParam == 'M') {
+			isBouncing = !isBouncing;
+
+			if (isBouncing) {
+				SetTimer(hWnd, TIMER_ID, 30, NULL);  // 30ms 간격으로 움직임
+			}
+			else {
+				KillTimer(hWnd, TIMER_ID);
+			}
+		}
+		else if (wParam == 'n' || wParam == 'N') {
+			isScaling = !isScaling;
+
+			if (isScaling) {
+				SetTimer(hWnd, SCALE_TIMER_ID, 100, NULL);  // 느리게
+			}
+			else {
+				KillTimer(hWnd, SCALE_TIMER_ID);
+				currentStep = 2;  // 중간 크기로 복귀 (선택)
+			}
+		}
+		break;
+	}
+	case WM_TIMER:
+	{
+		// 1. 튕기기 이동
+		if (wParam == TIMER_ID && isBouncing &&
+			magnifierRect.right > magnifierRect.left &&
+			magnifierRect.bottom > magnifierRect.top)
+		{
+			int w = magnifierRect.right - magnifierRect.left;
+			int h = magnifierRect.bottom - magnifierRect.top;
+
+			magnifierRect.left += dx;
+			magnifierRect.right += dx;
+			magnifierRect.top += dy;
+			magnifierRect.bottom += dy;
+
+			if (magnifierRect.left < 0 || magnifierRect.right > rect.right) {
+				dx = -dx;
+				magnifierRect.left += dx;
+				magnifierRect.right += dx;
+			}
+			if (magnifierRect.top < 0 || magnifierRect.bottom > rect.bottom) {
+				dy = -dy;
+				magnifierRect.top += dy;
+				magnifierRect.bottom += dy;
+			}
+
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+
+		// 2. 크기 애니메이션
+		else if (wParam == SCALE_TIMER_ID && isScaling && magnifierRect.right > magnifierRect.left && magnifierRect.bottom > magnifierRect.top) {
+			int centerX = (magnifierRect.left + magnifierRect.right) / 2;
+			int centerY = (magnifierRect.top + magnifierRect.bottom) / 2;
+
+			// 1. 현재 단계 크기 설정
+			int width = scaleWidths[currentStep];
+			int height = scaleWidths[currentStep];
+
+			// 2. 단계 이동
+			currentStep += stepDir;
+			if (currentStep >= NUM_STEPS - 1 || currentStep <= 0)
+				stepDir = -stepDir;
+
+			// 3. 사각형 재계산
+			magnifierRect.left = centerX - width / 2;
+			magnifierRect.right = centerX + width / 2;
+			magnifierRect.top = centerY - height / 2;
+			magnifierRect.bottom = centerY + height / 2;
+
+			// 4. 사각형 크기를 기준으로 scale 계산 (1.0이 기준)
+			int baseSize = scaleWidths[2];  // 중간 단계 기준 크기
+			scale = (float)width / baseSize;
+
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		break;
+	}
+	case WM_LBUTTONDOWN:
+	{
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
+		dragStart = { x, y };
+		originalRect = magnifierRect;
+		lastMousePos = dragStart; // 처음 누른 위치를 저장
+
+
+		int width = magnifierRect.right - magnifierRect.left;
+		int height = magnifierRect.bottom - magnifierRect.top;
+
+		if (width <= 0 || height <= 0) {
+			// 돋보기가 없으면 사각형 새로 만들기
+			isDragging = TRUE;
+			startPt = dragStart;
+			endPt = dragStart;
+			dragMode = DRAG_NONE;
+		}
+		else if (x > magnifierRect.left + 5 && x < magnifierRect.right - 5 &&
+			y > magnifierRect.top + 5 && y < magnifierRect.bottom - 5)
+		{
+			dragMode = DRAG_MOVE;
+		}
+		else if (PtInRect(&magnifierRect, dragStart))
+		{
+			dragMode = DRAG_RESIZE;
+		}
+		else {
+			// 돋보기는 있지만, 바깥쪽 클릭 시 → 새 사각형 만들기
+			isDragging = TRUE;
+			startPt = dragStart;
+			endPt = dragStart;
+			dragMode = DRAG_NONE;
+		}
+
+		SetCapture(hWnd);
+		break;
+	}
+	case WM_MOUSEMOVE:
+	{
+		if (GetCapture() && isDragging) {
+			HDC hdc = GetDC(hWnd);
+
+			// 1. XOR 모드 설정
+			SetROP2(hdc, R2_NOTXORPEN);
+
+			// 2. 펜 설정 (얇은 회색 펜)
+			HPEN hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
+			HPEN oldPen = (HPEN)SelectObject(hdc, hPen);
+			HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
+
+			// 3. 이전 사각형 지우기
+			Rectangle(hdc, startPt.x, startPt.y, endPt.x, endPt.y);
+
+			// 4. 새 위치 업데이트
+			endPt.x = LOWORD(lParam);
+			endPt.y = HIWORD(lParam);
+
+			// 5. 새 사각형 그리기
+			Rectangle(hdc, startPt.x, startPt.y, endPt.x, endPt.y);
+
+			// 6. 리소스 정리
+			SelectObject(hdc, oldPen);
+			SelectObject(hdc, oldBrush);
+			DeleteObject(hPen);
+			ReleaseDC(hWnd, hdc);
+		}
+		else if (GetCapture() && dragMode != DRAG_NONE) {
+			int x = LOWORD(lParam);
+			int y = HIWORD(lParam);
+
+			int dx = x - lastMousePos.x;
+			int dy = y - lastMousePos.y;
+
+			lastMousePos.x = x;
+			lastMousePos.y = y;
+
+			if (dragMode == DRAG_MOVE) {
+				OffsetRect(&magnifierRect, dx, dy);
+			}
+			else if (dragMode == DRAG_RESIZE) {
+				magnifierRect.right += dx;
+				magnifierRect.bottom += dy;
+			}
+
+			InvalidateRect(hWnd, NULL, FALSE);
+		}
+		break;
+	}
+
+	case WM_LBUTTONUP:
+	{
+		// 마우스 캡처 해제
+		if (GetCapture()) ReleaseCapture();
+
+		if (isDragging) {
+			isDragging = FALSE;
+
+			// 사각형 생성용 드래그가 끝난 경우
+			magnifierRect.left = min(startPt.x, endPt.x);
+			magnifierRect.right = max(startPt.x, endPt.x);
+			magnifierRect.top = min(startPt.y, endPt.y);
+			magnifierRect.bottom = max(startPt.y, endPt.y);
+		}
+		else if (dragMode != DRAG_NONE) {
+			// 이동 또는 리사이즈 종료
+			dragMode = DRAG_NONE;
+		}
+
+		InvalidateRect(hWnd, NULL, FALSE);  // 다시 그리기
+		break;
+	}
+	case WM_DESTROY:
+	{
+		DeleteObject(hBitmap1);
+		DeleteObject(hBitmap2);
+		KillTimer(hWnd, TIMER_ID);
+		KillTimer(hWnd, SCALE_TIMER_ID);
+		PostQuitMessage(0);
+		break;
+	}
+	}
+	return DefWindowProc(hWnd, iMessage, wParam, lParam);
+}
