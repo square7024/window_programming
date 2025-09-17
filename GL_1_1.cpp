@@ -1,60 +1,99 @@
 #include <iostream>
-#include <gl/glew.h>											//--- ÇÊ¿äÇÑ Çì´õÆÄÀÏ include
+#include <gl/glew.h>											//--- í•„ìš”í•œ í—¤ë”íŒŒì¼ include
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
+#include <random>
+
+float r = 0.0f;
+float g = 0.0f;
+float b = 0.0f;
+
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_real_distribution<float> urd(0.0f, 1.0f);
+
+bool t_flag = false;
 
 GLvoid drawScene(GLvoid);
 GLvoid Reshape(int w, int h);
 GLvoid Keyboard(unsigned char key, int x, int y);
+GLvoid TimerFunction(int val);
 
-void main(int argc, char** argv)								//--- À©µµ¿ì Ãâ·ÂÇÏ°í Äİ¹éÇÔ¼ö ¼³Á¤ 
+void main(int argc, char** argv)								//--- ìœˆë„ìš° ì¶œë ¥í•˜ê³  ì½œë°±í•¨ìˆ˜ ì„¤ì • 
 {
-	//--- À©µµ¿ì »ı¼ºÇÏ±â
-	glutInit(&argc, argv);										// glut ÃÊ±âÈ­
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// µğ½ºÇÃ·¹ÀÌ ¸ğµå ¼³Á¤
-	glutInitWindowPosition(0, 0);							// À©µµ¿ìÀÇ À§Ä¡ ÁöÁ¤
-	glutInitWindowSize(800, 600);								// À©µµ¿ìÀÇ Å©±â ÁöÁ¤
-	glutCreateWindow("Example1");								// À©µµ¿ì »ı¼º(À©µµ¿ì ÀÌ¸§)
+	//--- ìœˆë„ìš° ìƒì„±í•˜ê¸°
+	glutInit(&argc, argv);										// glut ì´ˆê¸°í™”
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// ë””ìŠ¤í”Œë ˆì´ ëª¨ë“œ ì„¤ì •
+	glutInitWindowPosition(0, 0);							// ìœˆë„ìš°ì˜ ìœ„ì¹˜ ì§€ì •
+	glutInitWindowSize(800, 600);								// ìœˆë„ìš°ì˜ í¬ê¸° ì§€ì •
+	glutCreateWindow("Practice_1");								// ìœˆë„ìš° ìƒì„±(ìœˆë„ìš° ì´ë¦„)
 
-	//--- GLEW ÃÊ±âÈ­ÇÏ±â
+	//--- GLEW ì´ˆê¸°í™”í•˜ê¸°
 	glewExperimental = GL_TRUE;
-	if (glewInit() != GLEW_OK) {								// glew ÃÊ±âÈ­ 
+	if (glewInit() != GLEW_OK) {								// glew ì´ˆê¸°í™” 
 		std::cerr << "Unable to initialize GLEW" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	else
 		std::cout << "GLEW Initialized\n";
-	glutDisplayFunc(drawScene);									// Ãâ·Â ÇÔ¼öÀÇ ÁöÁ¤
-	glutReshapeFunc(Reshape);									// ´Ù½Ã ±×¸®±â ÇÔ¼ö ÁöÁ¤
+
+	glutDisplayFunc(drawScene);									// ì¶œë ¥ í•¨ìˆ˜ì˜ ì§€ì •
+	glutReshapeFunc(Reshape);									// ë‹¤ì‹œ ê·¸ë¦¬ê¸° í•¨ìˆ˜ ì§€ì •
 	glutKeyboardFunc(Keyboard);
-	glutMainLoop();												// ÀÌº¥Æ® Ã³¸® ½ÃÀÛ
+	glutTimerFunc(100, TimerFunction, 1);
+	glutMainLoop();												// ì´ë²¤íŠ¸ ì²˜ë¦¬ ì‹œì‘
 }
 
-GLvoid drawScene()												//--- Äİ¹é ÇÔ¼ö: Ãâ·Â Äİ¹é ÇÔ¼ö 
-{
-	glClearColor(0.0f, 0.0f, 1.0f, 1.0f);						// ¹ÙÅÁ»öÀ» ¡®blue¡¯·Î ÁöÁ¤
-	glClear(GL_COLOR_BUFFER_BIT);								// ¼³Á¤µÈ »öÀ¸·Î ÀüÃ¼¸¦ Ä¥ÇÏ±â
-	glutSwapBuffers();											// È­¸é¿¡ Ãâ·ÂÇÏ±â
+GLvoid drawScene() {												//--- ì½œë°± í•¨ìˆ˜: ì¶œë ¥ ì½œë°± í•¨ìˆ˜ 
+	glClearColor(r, g, b, 1.0f);						// ë°”íƒ•ìƒ‰ì„ â€˜blueâ€™ë¡œ ì§€ì •
+	glClear(GL_COLOR_BUFFER_BIT);								// ì„¤ì •ëœ ìƒ‰ìœ¼ë¡œ ì „ì²´ë¥¼ ì¹ í•˜ê¸°
+	glutSwapBuffers();											// í™”ë©´ì— ì¶œë ¥í•˜ê¸°
 }
 
-GLvoid Reshape(int w, int h)									//--- Äİ¹é ÇÔ¼ö: ´Ù½Ã ±×¸®±â Äİ¹é ÇÔ¼ö 
-{
+GLvoid Reshape(int w, int h) {									//--- ì½œë°± í•¨ìˆ˜: ë‹¤ì‹œ ê·¸ë¦¬ê¸° ì½œë°± í•¨ìˆ˜ 
 	glViewport(0, 0, w, h);
 }
 
-GLvoid Keyboard(unsigned int key, int x, int y) 
-{
+GLvoid TimerFunction(int val) {
+	if (t_flag) {
+		r = urd(gen); g = urd(gen); b = urd(gen);
+	}
+	glutPostRedisplay();
+	glutTimerFunc(100, TimerFunction, 1);
+}
+
+GLvoid Keyboard(unsigned char key, int x, int y) {
 	switch (key) {
 	case 'c':
+		r = 0.0; g = 1.0; b = 1.0f;
 		break;
 	case 'm':
+		r = 1.0; g = 0.0; b = 1.0;
 		break;
 	case 'y':
+		r = 1.0; g = 1.0; b = 0.0;
 		break;
 	case 'a':
+		r = urd(gen); g = urd(gen); b = urd(gen);
 		break;
 	case 'w':
+		r = 1.0; g = 1.0; b = 1.0;
+		break;
+	case 'k':
+		r = 0.0; g = 0.0; b = 0.0;
+		break;
+	case 't':
+		t_flag = true;
+		if (t_flag) {
+			glutTimerFunc(100, TimerFunction, 1);
+		}
+		break;
+	case 's':
+		t_flag = false;
+		break;
+	case 'q':
+		glutLeaveMainLoop();
 		break;
 	}
-	glutPostRedisplay ();
+	glutPostRedisplay();
 }
