@@ -1,5 +1,5 @@
 #include <iostream>
-#include <gl/glew.h>											//--- ÇÊ¿äÇÑ Çì´õÆÄÀÏ include
+#include <gl/glew.h>											//--- í•„ìš”í•œ í—¤ë”íŒŒì¼ include
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
 #include <random>
@@ -11,77 +11,147 @@ struct Square {
 };
 
 struct Square s[4] = {
-	{ 0.25, 0.25, 0.75, 0.75,      1.0f,0.0f,0.0f },
-	{ -0.25, -0.25, 0.75, 0.75,    0.0f,1.0f,0.0f },
-	{ -0.25, -0.25, -0.75, -0.75,  0.0f,0.0f,1.0f },
-	{ 0.25, 0.25, -0.75, -0.75,    1.0f,1.0f,0.0f }
+	{  0.0f,  0.0f, 1.0f, 1.0f,    1.0f,0.0f,0.0f },
+	{ -1.0f,  0.0f, 0.0f, 1.0f,    0.0f,1.0f,0.0f },
+	{ -1.0f, -1.0f, 0.0f, 0.0f,    0.0f,0.0f,1.0f },
+	{  0.0f, -1.0f, 1.0f, 0.0f,    1.0f,1.0f,0.0f }
 };
+
+float bgR = 1.0f, bgG = 1.0f, bgB = 1.0f;
 
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_real_distribution<float> urd(0.0f, 1.0f);
 
+GLvoid randomizeColor(Square& s) {
+	s.r = urd(gen);
+	s.g = urd(gen);
+	s.b = urd(gen);
+}
+
+GLvoid randomizeBGColor() {
+	bgR = urd(gen);
+	bgG = urd(gen);
+	bgB = urd(gen);
+}
+
 GLvoid drawScene(GLvoid);
 GLvoid Reshape(int w, int h);
 GLvoid Mouse(int button, int state, int x, int y);
 GLvoid draw_square(const Square& s);
+bool pointInSquare(float nx, float ny, const Square& s);
+int quadrantOf(float nx, float ny);
 
-int main(int argc, char** argv)								//--- À©µµ¿ì Ãâ·ÂÇÏ°í Äİ¹éÇÔ¼ö ¼³Á¤ 
+int main(int argc, char** argv)								//--- ìœˆë„ìš° ì¶œë ¥í•˜ê³  ì½œë°±í•¨ìˆ˜ ì„¤ì • 
 {
-	//--- À©µµ¿ì »ı¼ºÇÏ±â
-	glutInit(&argc, argv);										// glut ÃÊ±âÈ­
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// µğ½ºÇÃ·¹ÀÌ ¸ğµå ¼³Á¤
-	glutInitWindowPosition(100, 100);							// À©µµ¿ìÀÇ À§Ä¡ ÁöÁ¤
-	glutInitWindowSize(500, 500);								// À©µµ¿ìÀÇ Å©±â ÁöÁ¤
-	glutCreateWindow("Practice_2");								// À©µµ¿ì »ı¼º(À©µµ¿ì ÀÌ¸§)
+	//--- ìœˆë„ìš° ìƒì„±í•˜ê¸°
+	glutInit(&argc, argv);										// glut ì´ˆê¸°í™”
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// ë””ìŠ¤í”Œë ˆì´ ëª¨ë“œ ì„¤ì •
+	glutInitWindowPosition(100, 100);							// ìœˆë„ìš°ì˜ ìœ„ì¹˜ ì§€ì •
+	glutInitWindowSize(500, 500);								// ìœˆë„ìš°ì˜ í¬ê¸° ì§€ì •
+	glutCreateWindow("Practice_2");								// ìœˆë„ìš° ìƒì„±(ìœˆë„ìš° ì´ë¦„)
 
-	//--- GLEW ÃÊ±âÈ­ÇÏ±â
+	//--- GLEW ì´ˆê¸°í™”í•˜ê¸°
 	glewExperimental = GL_TRUE;
-	if (glewInit() != GLEW_OK) {								// glew ÃÊ±âÈ­ 
+	if (glewInit() != GLEW_OK) {								// glew ì´ˆê¸°í™” 
 		std::cerr << "Unable to initialize GLEW" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	else
 		std::cout << "GLEW Initialized\n";
-	glutDisplayFunc(drawScene);									// Ãâ·Â ÇÔ¼öÀÇ ÁöÁ¤
-	glutReshapeFunc(Reshape);									// ´Ù½Ã ±×¸®±â ÇÔ¼ö ÁöÁ¤
+	glutDisplayFunc(drawScene);									// ì¶œë ¥ í•¨ìˆ˜ì˜ ì§€ì •
+	glutReshapeFunc(Reshape);									// ë‹¤ì‹œ ê·¸ë¦¬ê¸° í•¨ìˆ˜ ì§€ì •
 	glutMouseFunc(Mouse);
-	glutMainLoop();												// ÀÌº¥Æ® Ã³¸® ½ÃÀÛ
+	glutMainLoop();												// ì´ë²¤íŠ¸ ì²˜ë¦¬ ì‹œì‘
 }
 
-GLvoid drawScene() {												//--- Äİ¹é ÇÔ¼ö: Ãâ·Â Äİ¹é ÇÔ¼ö 
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);						// ¹ÙÅÁ»öÀ» ¡®blue¡¯·Î ÁöÁ¤
-	glClear(GL_COLOR_BUFFER_BIT);								// ¼³Á¤µÈ »öÀ¸·Î ÀüÃ¼¸¦ Ä¥ÇÏ±â
+GLvoid drawScene() {												//--- ì½œë°± í•¨ìˆ˜: ì¶œë ¥ ì½œë°± í•¨ìˆ˜ 
+	glClearColor(bgR, bgG, bgB, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);								// ì„¤ì •ëœ ìƒ‰ìœ¼ë¡œ ì „ì²´ë¥¼ ì¹ í•˜ê¸°
 	
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glRectf(0, 0, 1, 1);
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glRectf(0, 0, -1, 1);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glRectf(0, 0, -1, -1);
-	glColor3f(1.0f, 1.0f, 0.0f);
-	glRectf(0, 0, 1, -1);
-
-	glColor3f(0.5f, 0.0f, 0.0f);
-	draw_square(s[0]);
-
-	glutSwapBuffers();											// È­¸é¿¡ Ãâ·ÂÇÏ±â
+	for (int i = 0; i < 4; i++) draw_square(s[i]);												
+	
+	glutSwapBuffers();											// í™”ë©´ì— ì¶œë ¥í•˜ê¸°
 }
 
-GLvoid Reshape(int w, int h) {									//--- Äİ¹é ÇÔ¼ö: ´Ù½Ã ±×¸®±â Äİ¹é ÇÔ¼ö 
+GLvoid Reshape(int w, int h) {									//--- ì½œë°± í•¨ìˆ˜: ë‹¤ì‹œ ê·¸ë¦¬ê¸° ì½œë°± í•¨ìˆ˜ 
 	glViewport(0, 0, w, h);
 }
 
 GLvoid draw_square(const Square& s) {
-	glRectf(s.x1, s.y1, s.x2, s.y2);
+	float cx = 0.5f * (s.x1 + s.x2);
+	float cy = 0.5f * (s.y1 + s.y2);
+	float x1 = cx + (s.x1 - cx) * s.scale;
+	float y1 = cy + (s.y1 - cy) * s.scale;
+	float x2 = cx + (s.x2 - cx) * s.scale;
+	float y2 = cy + (s.y2 - cy) * s.scale;
+
+	glColor3f(s.r, s.g, s.b);
+	glRectf(x1, y1, x2, y2);
+}
+
+bool pointInSquare(float nx, float ny, const Square& s) {
+	float cx = 0.5f * (s.x1 + s.x2);
+	float cy = 0.5f * (s.y1 + s.y2);
+	float x1 = cx + (s.x1 - cx) * s.scale;
+	float x2 = cx + (s.x2 - cx) * s.scale;
+	float y1 = cy + (s.y1 - cy) * s.scale;
+	float y2 = cy + (s.y2 - cy) * s.scale;
+
+	if (x1 > x2) std::swap(x1, x2);
+	if (y1 > y2) std::swap(y1, y2);
+
+	return (nx >= x1 && nx <= x2 && ny >= y1 && ny <= y2);
+}
+
+int quadrantOf(float nx, float ny) {
+	// Q1: 0 0, Q2: 1 0, Q3: 2 2, Q4: 3
+	if (nx >= 0.0f && ny >= 0.0f) return 0; // Q1 (ì˜¤ë¥¸ìª½ ìœ„)
+	if (nx < 0.0f && ny >= 0.0f) return 1; // Q2 (ì™¼ìª½ ìœ„)
+	if (nx < 0.0f && ny < 0.0f) return 2; // Q3 (ì™¼ìª½ ì•„ë˜)
+	return 3;                                // Q4 (ì˜¤ë¥¸ìª½ ì•„ë˜)
 }
 
 GLvoid Mouse(int button, int state, int x, int y) {
-	if (button == GLUT_LEFT_BUTTON) {					// ÁÂÅ¬¸¯
+	if (state != GLUT_DOWN) return;
 
-	}
-	else if (button == GLUT_RIGHT_BUTTON) {				// ¿ìÅ¬¸¯
+	float nx = (x / 500.0f) * 2.0f - 1.0f;
+	float ny = 1.0f - (y / 500.0f) * 2.0f;
 
+	int hit = -1;
+	for (int i = 0; i < 4; i++) {
+		if (pointInSquare(nx, ny, s[i])) {
+			hit = i;
+			break;
+		}
 	}
+
+	const float shrinkStep = 0.08f;
+	const float growStep = 0.08f;
+	const float minScale = 0.4f;
+	
+	if (button == GLUT_LEFT_BUTTON) {
+		if (hit >= 0) {
+			// ì‚¬ê°í˜• ë‚´ë¶€: í•´ë‹¹ ì‚¬ê°í˜• ìƒ‰ ëœë¤
+			randomizeColor(s[hit]);
+		}
+		else {
+			// ì™¸ë¶€: ë°°ê²½ìƒ‰ ëœë¤
+			randomizeBGColor();
+		}
+	}
+	else if (button == GLUT_RIGHT_BUTTON) {
+		if (hit >= 0) {
+			// ë‚´ë¶€: í•´ë‹¹ ì‚¬ê°í˜• ì¶•ì†Œ
+			s[hit].scale = std::max(minScale, s[hit].scale - shrinkStep);
+		}
+		else {
+			// ì™¸ë¶€: ëª¨ë“  ì‚¬ê°í˜• í™•ëŒ€ (ìµœëŒ€ 1.0)
+			int q = quadrantOf(nx, ny);
+			s[q].scale = std::min(1.0f, s[q].scale + growStep);
+		}
+		
+	}
+
 	glutPostRedisplay();
 }
