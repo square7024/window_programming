@@ -12,8 +12,8 @@ void main(int argc, char** argv)								//--- 윈도우 출력하고 콜백함�
 	glutInit(&argc, argv);										// glut 초기화
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// 디스플레이 모드 설정
 	glutInitWindowPosition(100, 100);							// 윈도우의 위치 지정
-	glutInitWindowSize(500, 500);								// 윈도우의 크기 지정
-	glutCreateWindow("Practice_0");								// 윈도우 생성(윈도우 이름)
+	glutInitWindowSize(800, 800);								// 윈도우의 크기 지정
+	glutCreateWindow("Practice_00");								// 윈도우 생성(윈도우 이름)
 
 	//--- GLEW 초기화하기
 	glewExperimental = GL_TRUE;
@@ -39,3 +39,4 @@ GLvoid drawScene() {												//--- 콜백 함수: 출력 콜백 함수
 GLvoid Reshape(int w, int h) {									//--- 콜백 함수: 다시 그리기 콜백 함수 
 	glViewport(0, 0, w, h);
 }
+
