@@ -1,0 +1,39 @@
+프림(또는 다익스트라)알고리즘이 n^2이 아닌 nlogn 알고리즘이 되는 조건은?
+1. min heap을 사용해서 Vmin을 찾는다면
+2. 간선수가 n의 크기에 비례할때(=하나의 점에 연결되는 간선수가 상수개라면)
+
+sparse matrix : 0이 대부분인 matrix
+
+branch : prep_weights_array
+	commit : array 로 저장될 때 weights 에 대한 update 진행
+		if ci != fr: // 처음 점의 경우에는 간선 추가 X
+
+	array로 구현할 경우 대부분이 무한대인 배열에서 최솟값을 계속 찾아야만한다.
+
+branch : prep_weights_dict
+	commit : dict() 에서 가장 작은 weight 찾기
+		array 보다 최솟값을 찾기 더 편하다
+
+branch : a01
+	commit : ch42pr-7. [(weight,index)] 에서 가장 작은 weight 를 꺼낸다
+		가중치를 튜플로 저장한다.
+
+	commit : ch42pr-9. weights 에는 from 정보까지 넣어야 한다. 즉 [(weight, to, from)] 형태로 저장하기로 한다
+		튜플의 원소를 3개가지 저장한다. ( 코드 33줄 버그 수정 : weights.append((0, start_city_index, 0)) -> weights.append((0, start_city_index, start_city_index)) )
+
+	commit : ch42pr-14. pop_smallest_weight() 함수 대신 heqpq.heappop() 을 이용한다. 이를 위해 weights 를 항상 heap 상태로 유지시킨다
+		heqpq.heappop(), push 두 함수 모두 logn의 시간이 걸린다.
+
+
+크루스칼 : n개의 트리가 1개 씩 줄어들면서 최종적으로 1개의 트리가 되면 종료.
+프림 : 1개의 트리에서 신장됨.
+
+다익스트라 : 출발점으로부터 최단 거리가 확정되지 않은 점들 중에서 출발점으로 부터 가장 가까운 점을 추가하고, 추가한 점으로 부터 정보를 갱신
+
+시간복잡도 : O(n^2)(배열일때) 하지만 O(nlogn)(최소힙, 주변에 있는 점이 상수개와 연결될 때)
+
+knapsack problem : 1. n개의 물건이 1개씩 있고 2. 각 물건은 무게와 가치를 가지고 있으며, 3. 배낭이 한정된 무게의 물건들을 담을 수 있을 때, 4. 최대의 가치를 갖도록 배낭에 넣을 물건들을 정하는 문제
+부분 배낭 문제 : 물건을 부분적으로 담는 것을 허용 (ex : 쌀, 보리, 콩)	시간 복잡도 : O(nlogn)
+0-1 배낭 문제 : 물건을 통째로 배낭에 넣어야 한다(물건을 나눌 수 없음).
+
+Set Cover 문제 : 시간복잡도 O(n^3)
